@@ -10,9 +10,14 @@
                 "-fansi-escape-codes",
                 "-g",
                 "${workspaceFolder}/src/main.cpp", // Path to your main.cpp file
+                "${workspaceFolder}/src/config.cpp", // Add other source files here
+                "${workspaceFolder}/src/systeminfo.cpp", // Add other source files here
+                "${workspaceFolder}/src/ai.cpp", // Add other source files here
+                "${workspaceFolder}/src/utils.cpp", // Add other source files here
                 "-I${workspaceFolder}/include", // Include path
                 "-o",
-                "${workspaceFolder}/bin/main" // Output directory and executable name
+                "${workspaceFolder}/bin/main", // Output directory and executable name
+                "-lcurl" // Link against libcurl
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
