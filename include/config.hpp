@@ -12,10 +12,9 @@ public:
     std::string desktop;
     std::string shell;
     std::string terminal;
-    std::string ai_api;
 
     // Loads configuration from file; if missing, launches interactive setup.
-    static Config load(const std::string &configPath);
+    static Config load(const std::string &configPath = "/home/xyz/.config/sysiq/config.json");
 
     // Saves configuration to the given file.
     void save(const std::string &configPath) const;

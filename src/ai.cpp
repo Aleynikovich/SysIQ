@@ -3,6 +3,8 @@
 #include <string>
 #include <curl/curl.h>
 #include "json.hpp"
+#include <sstream>
+#include <regex> // Include regex library
 
 using json = nlohmann::json;
 
@@ -15,14 +17,41 @@ size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp) {
 }
 
 namespace AI {
+template <>
+FinalCommandResponse from_json(const json& j) {
+    FinalCommandResponse response;
+    response.command = j.at("command").get<std::string>();
+    return response;
+}
+
+template <>
+PackageListResponse from_json(const json& j) {
+    PackageListResponse response;
+    response.packages = j.at("packages").get<std::vector<std::string>>();
+    return response;
+}
+
+template <>
+InstallCommandResponse from_json(const json& j) {
+    InstallCommandResponse response;
+    response.install_command = j.at("install_command").get<std::string>();
+    return response;
+}
+
+// Safely parse a JSON string, handling errors
+nlohmann::json safe_parse(const std::string& str) {
+    try {
+        return json::parse(str);
+    } catch (json::parse_error& e) {
+        std::cerr << "JSON Parse error: " << e.what() << std::endl;
+        return {}; // Return an empty JSON object to indicate failure
+    }
+}
 
 // Function to query the Gemini API and get a response
-std::string queryAI(const std::string &prompt, const Config &config) {
-    // Get API key from config. Assume load/interactive setup handles this securely.
-    const std::string& apiKey = config.ai_api;  // Important: Use const reference!
-    std::string apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+std::string queryAI(const std::string &prompt, const std::string &apiKey) {
+    std::string modelName = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
-    // Construct the request payload for the Gemini API
     json payload = {
         {"contents", {
             {
@@ -32,36 +61,29 @@ std::string queryAI(const std::string &prompt, const Config &config) {
             }
         }},
         {"generationConfig", {
-            {"temperature", 0.2}
+            {"temperature", 0.0} // Use temperature 0 for deterministic output,
         }}
     };
-
     std::string payloadStr = payload.dump();
     std::string responseStr;
 
     CURL *curl = curl_easy_init();
     if (!curl) {
         std::cerr << "Error initializing curl.\n";
-        return "";  // Indicate failure
+        return "";
     }
 
     struct curl_slist *headers = nullptr;
     headers = curl_slist_append(headers, "Content-Type: application/json");
 
-    //Option 1: Append key to url:
-    std::string urlWithKey = apiUrl + "?key=" + apiKey;
+    std::string urlWithKey = modelName + "?key=" + apiKey;
+
     curl_easy_setopt(curl, CURLOPT_URL, urlWithKey.c_str());
-
-    //Option 2: Authorization header. You may need to use OAuth.
-    //std::string authHeader = "Authorization: Bearer " + apiKey;
-    //headers = curl_slist_append(headers, authHeader.c_str());
-    //curl_easy_setopt(curl, CURLOPT_URL, apiUrl.c_str()); //Remove key from URL in this case.
-
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payloadStr.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseStr);
-    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(curl, CURLOPT_POST, 1L); // This is Required
 
     CURLcode res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
@@ -84,56 +106,104 @@ std::string queryAI(const std::string &prompt, const Config &config) {
     curl_easy_cleanup(curl);
 
     std::cout << "Raw AI response:\n" << responseStr << "\n";
-
-    try {
-        json result = json::parse(responseStr);
-        // Adjust this path based on the actual JSON structure from the Gemini API.
-        std::string command = result["candidates"][0]["content"]["parts"][0]["text"].get<std::string>();
-        return command;
-    } catch (json::exception &e) {
-        std::cerr << "JSON parsing error: " << e.what() << "\n";
-        std::cerr << "Response: " << responseStr << "\n";
-        return "";
-    }
-}
-
-
-// Constructs a prompt to ask the AI for the package list needed to answer the user query.
-std::string queryPackageList(const Config &config, const json &sysInfo, const std::string &userQuery) {
-    // Construct a prompt that includes system information and the user query.
-    // Instruct the AI to output ONLY the package names (one per line).
-    std::string prompt = "Considering I am using distro: " + config.distro +
-                         ", Desktop Environment: " + config.desktop +
-                         ", Shell: " + config.shell +
-                         ", Terminal: " + config.terminal +
-                         ", and system info: " + sysInfo.dump() +
-                         ", give me ONLY a list (one per line) of the packages needed to answer the following question: " +
-                         userQuery;
-    return queryAI(prompt, config);
-}
-
-// Constructs a prompt to ask the AI for the command to install a list of missing packages.
-std::string queryInstallCommand(const Config &config, const json &sysInfo, const std::string &missingPackages) {
-    std::string prompt = "Considering I am using distro: " + config.distro +
-                         ", Desktop Environment: " + config.desktop +
-                         ", Shell: " + config.shell +
-                         ", Terminal: " + config.terminal +
-                         ", and system info: " + sysInfo.dump() +
-                         ", I am missing the following packages:\n" + missingPackages +
-                         "\nProvide ONLY the single-line command to install them (no extra text).";
-    return queryAI(prompt, config);
+    return responseStr;
 }
 
 // Constructs a prompt to ask the AI for the final command to get the information asked in the user query.
-std::string queryFinalCommand(const Config &config, const json &sysInfo, const std::string &userQuery) {
-    std::string prompt = "Considering I am using distro: " + config.distro +
-                         ", Desktop Environment: " + config.desktop +
-                         ", Shell: " + config.shell +
-                         ", Terminal: " + config.terminal +
-                         ", and system info: " + sysInfo.dump() +
-                         ", and that all required packages are installed, what is the single-line command to answer the following question: " +
-                         userQuery;
-    return queryAI(prompt, config);
+FinalCommandResponse queryFinalCommand(const Config &config, const json &sysInfo, const std::string &userQuery, const std::string &apiKey) {
+    std::string prompt = "Hello, Gemini! Can you provide me with the command i need in " + config.distro + " " + config.desktop + " " + config.shell + " " + config.terminal + " to be able to " + userQuery + "? I need your response to ONLY be a json structured text that I can parse to know which command to run. Do not include any \\n or '' just a plain json text using this JSON schema: package = {\"command\": str}";
+
+    std::cout << "Prompt being sent to AI:\n" << prompt << std::endl; // Added logging
+
+    std::string response = queryAI(prompt, apiKey);
+    if (response.empty()) return {};
+
+    try {
+        json rawResult = json::parse(response);
+        std::string jsonText = rawResult["candidates"][0]["content"]["parts"][0]["text"].get<std::string>();
+
+        // Clean the string to extract the JSON object
+        std::regex pattern("^.*?(\\{.*\\}).*$");
+        std::smatch match;
+        if (std::regex_search(jsonText, match, pattern) && match.size() > 1) {
+            jsonText = match[1].str();
+        } else {
+            std::cerr << "Could not find JSON object in response." << std::endl;
+            return {};
+        }
+
+        json result = safe_parse(jsonText);
+        FinalCommandResponse finalCommandResponse = from_json<FinalCommandResponse>(result);
+        return finalCommandResponse;
+
+    } catch (json::exception &e) {
+        std::cerr << "JSON parsing error: " << e.what() << "\n";
+        return {};
+    }
 }
+
+PackageListResponse queryPackageList(const Config &config, const json &sysInfo, const std::string &userQuery, const std::string &apiKey) {
+    std::string prompt = "Hello, Gemini! Can you provide me with a list of packages i need in " + config.distro + " " + config.desktop + " " + config.shell + " " + config.terminal + " to be able to " + userQuery + "? I need your response to ONLY be a json structured text that I can parse to know which packages to install. Do not include any \\n or '' just a plain json text using this JSON schema: package = {\\\"package_name\\\": str}";
+
+    std::cout << "Prompt being sent to AI:\n" << prompt << std::endl; // Added logging
+
+    std::string response = queryAI(prompt, apiKey);
+    if (response.empty()) return {};
+
+    try {
+        json rawResult = json::parse(response);
+        std::string jsonText = rawResult["candidates"][0]["content"]["parts"][0]["text"].get<std::string>();
+
+        // Clean the string to extract the JSON object
+        std::regex pattern("^.*?(\\{.*\\}).*$");
+        std::smatch match;
+        if (std::regex_search(jsonText, match, pattern) && match.size() > 1) {
+            jsonText = match[1].str();
+        } else {
+            std::cerr << "Could not find JSON object in response." << std::endl;
+            return {};
+        }
+
+        json result = safe_parse(jsonText);
+        PackageListResponse packageListResponse = from_json<PackageListResponse>(result);
+        return packageListResponse;
+    } catch (json::exception &e) {
+        std::cerr << "JSON parsing error: " << e.what() << "\n";
+        return {};
+    }
+}
+
+InstallCommandResponse queryInstallCommand(const Config &config, const json &sysInfo, const std::string &missingPackages, const std::string &apiKey) {
+    std::string prompt = "What command installs these packages" + missingPackages + "? "
+                         "Respond with JSON: {\"install_command\": \"the command to execute\"}";
+
+    std::cout << "Prompt being sent to AI:\n" << prompt << std::endl; // Added logging
+
+    std::string response = queryAI(prompt, apiKey);
+        if (response.empty()) return {};
+
+    try {
+        json rawResult = json::parse(response);
+         std::string jsonText = rawResult["candidates"][0]["content"]["parts"][0]["text"].get<std::string>();
+
+        // Clean the string to extract the JSON object
+        std::regex pattern("^.*?(\\{.*\\}).*$");
+        std::smatch match;
+        if (std::regex_search(jsonText, match, pattern) && match.size() > 1) {
+            jsonText = match[1].str();
+        } else {
+            std::cerr << "Could not find JSON object in response." << std::endl;
+            return {};
+        }
+
+        json result = safe_parse(jsonText);
+        InstallCommandResponse installCommandResponse = from_json<InstallCommandResponse>(result);
+        return installCommandResponse;
+    } catch (json::exception &e) {
+        std::cerr << "JSON parsing error: " << e.what() << "\n";
+        return {};
+    }
+}
+
 
 } // namespace AI

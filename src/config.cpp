@@ -1,78 +1,86 @@
 #include "config.hpp"
 #include <fstream>
 #include <iostream>
-#include <filesystem>
+#include <filesystem> // Necessary for creating directories
 
 namespace fs = std::filesystem;
 
-Config Config::interactiveSetup() {
-    Config cfg;
-    std::string input;
-    std::cout << "=== SysIQ Configurator ===\n";
-
-    std::cout << "Enter your distro (default: Arch Linux): ";
-    std::getline(std::cin, input);
-    cfg.distro = input.empty() ? "Arch Linux" : input;
-
-    std::cout << "Enter your Desktop Environment/WM (default: Hyprland): ";
-    std::getline(std::cin, input);
-    cfg.desktop = input.empty() ? "Hyprland" : input;
-
-    std::cout << "Enter your shell (default: fish): ";
-    std::getline(std::cin, input);
-    cfg.shell = input.empty() ? "fish" : input;
-
-    std::cout << "Enter your terminal emulator (default: foot): ";
-    std::getline(std::cin, input);
-    cfg.terminal = input.empty() ? "foot" : input;
-
-    std::cout << "Enter your preferred AI API (default: Gemini): ";
-    std::getline(std::cin, input);
-    cfg.ai_api = input.empty() ? "Gemini" : input;
-
-    return cfg;
-}
-
 Config Config::load(const std::string &configPath) {
-    Config cfg;
-    if (!fs::exists(configPath)) {
-        std::cout << "Config file not found at " << configPath << ". Create one? (y/n): ";
-        std::string answer;
-        std::getline(std::cin, answer);
-        if (answer == "y" || answer == "Y") {
-            cfg = Config::interactiveSetup();
-            fs::create_directories(fs::path(configPath).parent_path());
-            cfg.save(configPath);
-        } else {
-            std::cout << "Exiting without configuration.\n";
-            exit(1);
+    Config config;
+    std::ifstream configFile(configPath);
+
+    if (!configFile.is_open()) {
+        // Check if the directory exists, and create it if it doesn't
+        fs::path dirPath = fs::path(configPath).parent_path();
+        if (!fs::exists(dirPath)) {
+            std::cout << "Creating directory: " << dirPath << std::endl;
+            try {
+                fs::create_directories(dirPath); // Create parent directories
+            } catch (const std::exception& e) {
+                std::cerr << "Error creating directory: " << e.what() << std::endl;
+                std::cerr << "Config file not found, and unable to create directory. Launching interactive setup." << std::endl;
+                return interactiveSetup();
+            }
         }
-    } else {
-        std::ifstream inFile(configPath);
-        json j;
-        inFile >> j;
-        cfg.distro = j.value("distro", "Arch Linux");
-        cfg.desktop = j.value("desktop", "Hyprland");
-        cfg.shell = j.value("shell", "fish");
-        cfg.terminal = j.value("terminal", "foot");
-        cfg.ai_api = j.value("ai_api", "Gemini");
+
+        std::cerr << "Config file not found at " << configPath << ". Launching interactive setup." << std::endl;
+        return interactiveSetup();
     }
-    return cfg;
+
+    try {
+        json configJson;
+        configFile >> configJson;
+
+        config.distro = configJson.value("distro", "");
+        config.desktop = configJson.value("desktop", "");
+        config.shell = configJson.value("shell", "");
+        config.terminal = configJson.value("terminal", "");
+    } catch (const std::exception& e) {
+        std::cerr << "Error loading config file: " << e.what() << ". Using interactive setup." << std::endl;
+        return interactiveSetup();
+    }
+
+    return config;
 }
 
 void Config::save(const std::string &configPath) const {
-    json j;
-    j["distro"] = distro;
-    j["desktop"] = desktop;
-    j["shell"] = shell;
-    j["terminal"] = terminal;
-    j["ai_api"] = ai_api;
+    json configJson;
+    configJson["distro"] = distro;
+    configJson["desktop"] = desktop;
+    configJson["shell"] = shell;
+    configJson["terminal"] = terminal;
 
-    std::ofstream outFile(configPath);
-    if (!outFile) {
-        std::cerr << "Error writing configuration file.\n";
-        exit(1);
+    std::ofstream configFile(configPath);
+    if (configFile.is_open()) {
+        configFile << configJson.dump(4); // Use dump(4) for pretty printing
+        if(configFile.good()){
+          std::cout << "Configuration saved to " << configPath << std::endl;
+        }else{
+          std::cerr << "Error writing to config file!" << std::endl;
+        }
+    } else {
+        std::cerr << "Error opening config file for writing!" << std::endl;
     }
-    outFile << j.dump(4);
-    std::cout << "Configuration saved to " << configPath << "\n\n";
+}
+
+
+Config Config::interactiveSetup() {
+    Config config;
+
+    std::cout << "Starting interactive configuration setup:" << std::endl;
+
+    std::cout << "Enter your Linux distribution: ";
+    std::getline(std::cin, config.distro);
+
+    std::cout << "Enter your desktop environment: ";
+    std::getline(std::cin, config.desktop);
+
+    std::cout << "Enter your shell: ";
+    std::getline(std::cin, config.shell);
+
+    std::cout << "Enter your terminal: ";
+    std::getline(std::cin, config.terminal);
+
+    std::cout << "Interactive configuration complete." << std::endl;
+    return config;
 }

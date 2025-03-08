@@ -1,89 +1,122 @@
 #include <iostream>
 #include <string>
-#include <algorithm>
+#include <sstream> // Include sstream for string concatenation
+#include "ai.hpp"
 #include "config.hpp"
 #include "json.hpp"
-#include "systeminfo.hpp"
-#include "ai.hpp"
-#include "utils.hpp"
+#include <filesystem>
+#include <cstdlib> // Required for getenv
+#include <algorithm> // Needed for std::find
+#include <stdexcept>
+
+namespace fs = std::filesystem;
 
 using json = nlohmann::json;
 
-int main() {
-    // Determine configuration file path: ~/.config/sysiq/config.json
-    std::string home = std::getenv("HOME") ? std::getenv("HOME") : ".";
-    std::string configPath = home + "/.config/sysiq/config.json";
+// Function to check if a package is installed (replace with your system's method)
+bool isPackageInstalled(const std::string& package) {
+    // This is a placeholder - implement the actual check for your system
+    // Example (for Debian/Ubuntu):
+    // std::string command = "dpkg -s " + package + " > /dev/null 2>&1";
+    // return (system(command.c_str()) == 0); // Returns 0 if package is installed
 
-    // Load (or interactively create) the configuration.
-    Config config = Config::load(configPath);
-    std::cout << "\nCurrent Configuration:\n";
-    std::cout << "Distro: " << config.distro << "\n"
-              << "Desktop: " << config.desktop << "\n"
-              << "Shell: " << config.shell << "\n"
-              << "Terminal: " << config.terminal << "\n"
-              << "AI API: " << config.ai_api << "\n\n";
+    // Placeholder: Always returns false for now
+    return false;
+}
 
-    // Gather system information.
-    json sysInfo = getSystemInfo(config);
-    std::cout << "--- System Information ---\n";
-    std::cout << sysInfo.dump(4) << "\n\n";
+// Function to install a package (replace with your system's method)
+std::string installPackage(const Config& config, const std::string& installCommand) {
+    json sysInfo = {
+      {"distro", config.distro},
+      {"desktop", config.desktop},
+      {"shell", config.shell},
+      {"terminal", config.terminal}
+    };
+    std::cout << "Command: " << installCommand << std::endl;
+    int exit_code = system(installCommand.c_str());
+    if(exit_code == 0)
+    {
+      std::cout << "Installed fine" << std::endl;
+    }else{
+      std::cout << "Could not install" << std::endl;
+    }
+    //IMPLEMENT ME
+    return "";
+}
 
-    // Main query process.
-    std::string userQuery;
-    std::cout << "Enter your CLI query (or type 'exit' to quit): ";
-    std::getline(std::cin, userQuery);
-    if (userQuery == "exit" || userQuery == "quit")
-        return 0;
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <user_query>" << std::endl;
+        return 1;
+    }
 
-    // Step 1: Ask AI for package list needed to answer the query.
-    std::cout << "\nQuerying AI for required packages...\n";
-    std::string packageList = queryPackageList(config, sysInfo, userQuery);
-    std::cout << "AI package list:\n" << packageList << "\n\n";
+    // Load the configuration
+    Config config = Config::load();
 
-    // Step 2: Compare with installed packages.
-    // (For simplicity, we assume package names are one per line in the AI response.)
-    std::istringstream iss(packageList);
-    std::string pkg;
-    std::string missingPackages;
-    while (std::getline(iss, pkg)) {
-        pkg.erase(std::remove(pkg.begin(), pkg.end(), '\r'), pkg.end());
-        if (!checkDependency(pkg)) {
-            missingPackages += pkg + "\n";
+    // Get the API key from the environment variables:
+    const char* apiKey = std::getenv("GEMINI_API_KEY");
+    if (apiKey == nullptr) {
+        std::cerr << "Error: GEMINI_API_KEY environment variable not set." << std::endl;
+        return 1;
+    }
+    std::string apiKeyStr(apiKey);
+
+    // Concatenate command line arguments into a single user query string
+    std::stringstream ss;
+    for (int i = 1; i < argc; ++i) {
+        ss << argv[i] << (i == argc - 1 ? "" : " ");  // Add space between arguments
+    }
+    std::string userQuery = ss.str();
+
+    // Create a JSON object to hold the configuration data
+    json sysInfo = {
+      {"distro", config.distro},
+      {"desktop", config.desktop},
+      {"shell", config.shell},
+      {"terminal", config.terminal}
+    };
+
+    // 1. Get the list of required packages
+    AI::PackageListResponse packageListResponse = AI::queryPackageList(config, sysInfo, userQuery, apiKeyStr);
+    if (packageListResponse.packages.empty()) {
+        std::cerr << "Failed to get the list of required packages." << std::endl;
+        return 1;
+    }
+
+    // 2. Install missing packages
+    std::vector<std::string> missingPackages;
+    for (const auto& package : packageListResponse.packages) {
+        if (!isPackageInstalled(package)) {
+            missingPackages.push_back(package);
         }
     }
 
     if (!missingPackages.empty()) {
-        std::cout << "Missing packages:\n" << missingPackages << "\n";
-        std::cout << "Querying AI for the install command...\n";
-        std::string installCmd = queryInstallCommand(config, sysInfo, missingPackages);
-        std::cout << "AI suggests the following install command:\n" << installCmd << "\n";
-        std::cout << "Do you want to execute the install command? (y/n): ";
-        std::string answer;
-        std::getline(std::cin, answer);
-        if (answer == "y" || answer == "Y") {
-            std::string installOutput = runCommand(installCmd);
-            std::cout << "Installation command output:\n" << installOutput << "\n";
-        } else {
-            std::cout << "Installation command execution cancelled.\n";
+        std::cout << "Installing missing packages:" << std::endl;
+        //Get command to install packages
+        AI::InstallCommandResponse installCommandResponse = AI::queryInstallCommand(config, sysInfo,  missingPackages[0], apiKeyStr);
+        //Run Command to install
+
+        if(installCommandResponse.install_command.empty()){
+          std::cout << "Failed to get command" << std::endl;
         }
+
+        std::string installResult = installPackage(config, installCommandResponse.install_command);
+
     } else {
-        std::cout << "All required packages are already installed.\n";
+        std::cout << "All required packages are already installed." << std::endl;
     }
 
-    // Step 3: With all packages installed, ask AI for the final command.
-    std::cout << "\nQuerying AI for the final command to answer your query...\n";
-    std::string finalCmd = queryFinalCommand(config, sysInfo, userQuery);
-    std::cout << "AI suggests the following command:\n" << finalCmd << "\n";
-    std::cout << "Do you want to execute this command? (y/n): ";
-    std::string execAnswer;
-    std::getline(std::cin, execAnswer);
-    if (execAnswer == "y" || execAnswer == "Y") {
-        std::string finalOutput = runCommand(finalCmd);
-        std::cout << "Command output:\n" << finalOutput << "\n";
-    } else {
-        std::cout << "Final command execution cancelled.\n";
+    // 3. Get the final command to execute
+    AI::FinalCommandResponse finalCommandResponse = AI::queryFinalCommand(config, sysInfo, userQuery, apiKeyStr);
+    if (finalCommandResponse.command.empty()) {
+        std::cerr << "Failed to get the final command." << std::endl;
+        return 1;
     }
 
-    std::cout << "Exiting SysIQ. Goodbye!\n";
+    std::cout << "Executing command: " << finalCommandResponse.command << std::endl;
+    // Execute the command (replace with your preferred method)
+    system(finalCommandResponse.command.c_str());
+
     return 0;
 }
