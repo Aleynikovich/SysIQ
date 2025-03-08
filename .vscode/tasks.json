@@ -1,0 +1,30 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "cppbuild",
+            "label": "C/C++: clang++ build active file",
+            "command": "/usr/bin/clang++",
+            "args": [
+                "-fcolor-diagnostics",
+                "-fansi-escape-codes",
+                "-g",
+                "${workspaceFolder}/src/main.cpp", // Path to your main.cpp file
+                "-I${workspaceFolder}/include", // Include path
+                "-o",
+                "${workspaceFolder}/bin/main" // Output directory and executable name
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc" // Use the GCC problem matcher for clang++
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "Generated task by GitHub Copilot"
+        }
+    ]
+}

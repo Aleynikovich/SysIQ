@@ -1,8 +1,8 @@
 #include <iostream>
 #include <string>
 #include <algorithm>
-#include "json.hpp"
 #include "config.hpp"
+#include "json.hpp"
 #include "systeminfo.hpp"
 #include "ai.hpp"
 #include "utils.hpp"
