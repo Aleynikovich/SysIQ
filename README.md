@@ -1,99 +1,79 @@
       
-# SysIQ: Unleash the Power of AI in Your Terminal
+# SysIQ: AI-Powered Command Line Utility
 
 [![C++](https://img.shields.io/badge/language-C++-blue.svg)](https://www.cplusplus.com/)
 [![AI Powered](https://img.shields.io/badge/Powered%20by-Gemini%20AI-orange.svg)](https://ai.google.dev/models/gemini)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Tired of endless man pages and cryptic commands?**  SysIQ is your AI-powered command-line companion, designed to bridge the gap between natural language and the powerful world of Linux.  Ask questions in plain English, and SysIQ will intelligently guide you to the commands you need, handling package dependencies along the way.
+SysIQ is a command-line utility that leverages AI to assist users in finding and executing commands on Linux systems. It interprets natural language queries, identifies necessary packages, and provides the commands to achieve the desired task.
 
-## 🚀 Features:
+## Features:
 
-*   **Natural Language Command Querying:**  No more memorizing arcane syntax!  Simply ask SysIQ what you want to do in plain English, and let AI figure out the command.
-*   **Intelligent Package Management:** SysIQ, powered by Gemini AI, doesn't just give you commands – it understands the underlying system.  It suggests necessary packages and guides you through installation if needed.
-*   **Interactive Package Selection:**  Get a curated list of relevant packages, see their install status, and choose the right tool for the job – all within your terminal.
-*   **System-Aware Prompts:** SysIQ is context-aware, considering your distro, desktop environment, shell, and terminal for more accurate and relevant command suggestions.
-*   **Dynamic Terminal Interface:** Experience a visually engaging terminal output with color-coded information and loading indicators, providing a fluid and responsive user experience. (No cringe delays here, just pure optimized feedback 😉)
+*   **Natural Language Queries:**  Translate plain English questions into Linux commands.
+*   **Intelligent Package Resolution:**  AI-driven identification of required packages for specific tasks.
+*   **Interactive Package Handling:** Presents a list of suggested packages with installation status and allows user selection.
+*   **System Context Aware:** Considers distro, desktop environment, shell, and terminal for relevant command suggestions.
+*   **Formatted Terminal Output:** Provides a structured and colorized terminal interface for improved readability.
 
-## ✨ How to Use:
+## Usage:
 
 ### Prerequisites:
 
-Before you dive in, ensure you have the following installed:
-
-*   **libcurl:**  For seamless communication with the Gemini API.
+*   **libcurl:**  For HTTP requests to the Gemini API.
     ```bash
     sudo apt-get install libcurl4-openssl-dev  # Debian/Ubuntu
     sudo pacman -S curl                       # Arch Linux
-    # ... or your distro's equivalent
+    # ... or equivalent for your distro
     ```
-*   **nlohmann_json:**  The blazing-fast JSON library for C++.  (This project uses the single-header version - just include it!)
-    [Download nlohmann_json.hpp](https://github.com/nlohmann/json) and place it in your `include` directory.
-*   **Gemini API Key:**  You'll need an API key from Google AI Studio.  Set it as an environment variable:
+*   **nlohmann_json:**  Single-header JSON library for C++.
+    [Download nlohmann_json.hpp](https://github.com/nlohmann/json) and place in your `include` directory.
+*   **Gemini API Key:** Obtain an API key from Google AI Studio and set it as an environment variable:
     ```bash
     export GEMINI_API_KEY="YOUR_API_KEY_HERE"
     ```
-    **Important Security Note:**  Never hardcode your API key directly in the code! Environment variables are the secure way to go.
+    **Security:** Store your API key securely and avoid hardcoding it directly in the code.
 
 ### Compilation:
 
-Navigate to the `src` directory in your SysIQ repository and compile using `g++`:
+From the `src` directory:
 
 ```bash
 cd SysIQ/src
 g++ -o ../bin/sysiq main.cpp config.cpp systeminfo.cpp ai.cpp utils.cpp -lcurl -std=c++17 -I../include
 
-    
+Ensure -lcurl and -std=c++17 are included in your compilation command. Adjust -I../include if necessary.
+Execution:
 
-IGNORE_WHEN_COPYING_START
-Use code with caution.Markdown
-IGNORE_WHEN_COPYING_END
-
-Make sure you have -lcurl to link the curl library and -std=c++17 for C++17 support. Adjust the -Iinclude path if your include directory is located differently.
-Running SysIQ:
-
-Simply execute the compiled binary with your query as a command-line argument:
+Run the compiled binary with your query as an argument:
 
       
-./bin/sysiq <your_query>
+./bin/sysiq <query>
 
-    
 
-IGNORE_WHEN_COPYING_START
-Use code with caution.Bash
-IGNORE_WHEN_COPYING_END
+Example Queries:
 
-Examples:
+./bin/sysiq get my ip address
+./bin/sysiq check free disk space
+./bin/sysiq current weather in London
+./bin/sysiq monitor model na
 
-      
-./bin/sysiq what is my ip address
-./bin/sysiq how much disk space is free
-./bin/sysiq what is the weather in London
-./bin/sysiq whats my monitor model
+SysIQ will:
 
-    
+    Query Gemini AI: Send a request based on your query and system information.
 
-IGNORE_WHEN_COPYING_START
-Use code with caution.Bash
-IGNORE_WHEN_COPYING_END
+    Suggest Packages: Output a list of packages potentially required for the task.
 
-SysIQ will then:
+    User Selection: Present a numbered list, allowing you to choose a package.
 
-    Query Gemini AI: Intelligently formulate a request based on your query and system information.
+    Installation Prompt: Prompt for installation if the selected package is not detected.
 
-    Suggest Packages: If necessary, SysIQ will suggest a list of packages required to execute the command.
-
-    Interactive Selection: You'll be presented with a numbered list of packages. Choose one to proceed.
-
-    Install (Optional): If the selected package is not installed, SysIQ will prompt you for installation confirmation before proceeding.
-
-    Execute Command: Finally, SysIQ executes the command and displays the output directly in your terminal.
+    Execute Command: Run the command associated with the chosen package and display the result.
 
 Configuration:
 
-Customize SysIQ by editing the config.json file located at ~/.config/sysiq/config.json. If the file doesn't exist, SysIQ will guide you through an interactive setup on the first run.
+Configuration is managed through ~/.config/sysiq/config.json. The file is created on first run if it does not exist, and an interactive setup will guide you through initial configuration.
 
-Configuration Options:
+Config File (config.json) Structure:
 
       
 {
@@ -101,20 +81,17 @@ Configuration Options:
   "desktop": "Your Desktop Environment",
   "shell": "Your Shell",
   "terminal": "Your Terminal Emulator",
-  "ai_api": "YOUR_API_KEY_HERE",  <--  (Loaded securely, don't hardcode here!)
+  "ai_api": "YOUR_API_KEY_HERE",
   "package_manager": "Your Package Manager (e.g., yay, apt, dnf)"
 }
 
-    
 
-IGNORE_WHEN_COPYING_START
-Use code with caution.Json
-IGNORE_WHEN_COPYING_END
+API Key Security: Store your ai_api key securely. Environment variables are recommended over direct inclusion in the configuration file for sensitive credentials.
+Contributing
 
-Security Note: The ai_api field in config.json is automatically loaded if you run the interactive setup. However, for production use, consider loading your API key from environment variables or a more secure secrets management system.
-🤝 Contributing
+Contributions are welcome. Fork the repository, submit pull requests, or create issues for bug reports and feature suggestions.
+License
 
-Contributions are welcome! Feel free to fork this repository, submit pull requests, or open issues to suggest improvements or report bugs.
-📜 License
+MIT License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+Command line assistance, powered by AI.
