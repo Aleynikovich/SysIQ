@@ -84,9 +84,9 @@ int main(int argc, char *argv[]) {
     }
 
     // 2. Install missing packages
-    std::vector<std::string> missingPackages;
+    std::vector<AI::PackageInfo> missingPackages;
     for (const auto& package : packageListResponse.packages) {
-        if (!isPackageInstalled(package)) {
+        if (!isPackageInstalled(package.package_name)) {
             missingPackages.push_back(package);
         }
     }
@@ -94,29 +94,15 @@ int main(int argc, char *argv[]) {
     if (!missingPackages.empty()) {
         std::cout << "Installing missing packages:" << std::endl;
         //Get command to install packages
-        AI::InstallCommandResponse installCommandResponse = AI::queryInstallCommand(config, sysInfo,  missingPackages[0], apiKeyStr);
         //Run Command to install
 
-        if(installCommandResponse.install_command.empty()){
-          std::cout << "Failed to get command" << std::endl;
-        }
-
-        std::string installResult = installPackage(config, installCommandResponse.install_command);
+        std::string installResult = installPackage(config, missingPackages[0].command);
 
     } else {
         std::cout << "All required packages are already installed." << std::endl;
     }
 
     // 3. Get the final command to execute
-    AI::FinalCommandResponse finalCommandResponse = AI::queryFinalCommand(config, sysInfo, userQuery, apiKeyStr);
-    if (finalCommandResponse.command.empty()) {
-        std::cerr << "Failed to get the final command." << std::endl;
-        return 1;
-    }
-
-    std::cout << "Executing command: " << finalCommandResponse.command << std::endl;
     // Execute the command (replace with your preferred method)
-    system(finalCommandResponse.command.c_str());
-
     return 0;
 }

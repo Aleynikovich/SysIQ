@@ -1,40 +1,29 @@
 {
     "version": "0.2.0",
     "configurations": [
-        {
-            "type": "lldb-dap",
-            "request": "launch",
-            "name": "Launch with LLDB-DAP",
-            "program": "${workspaceRoot}/bin/main", // Path to your compiled executable
-            "args": [],
-            "env": [],
-            "cwd": "${workspaceRoot}"
-        },
-        {
-            "name": "Launch Program",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/bin/main", // Path to your compiled executable
-            "args": [],
-            "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "lldb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for lldb",
-                    "text": "settings set target.pretty-printing true",
-                    "ignoreFailures": true
-                }
-            ],
-            "preLaunchTask": "C/C++: clang++ build active file",
-            "miDebuggerPath": "/usr/bin/lldb", // Path to lldb
-            "logging": {
-                "trace": true,
-                "traceResponse": true,
-                "engineLogging": true
-            }
-        }
+      {
+        "name": "Debug",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin/main",
+        "args": ["whats my monitor model?"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [
+          {
+            "name": "GEMINI_API_KEY",
+            "value": "AIzaSyALmvwKW5WdZohY5Y8apPjv0Iqncf2pKvI"
+          }
+        ],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+          {
+            "description": "Enable pretty-printing for gdb",
+            "text": "-enable-pretty-printing",
+            "ignoreFailures": true
+          }
+        ]
+      }
     ]
-}
+  }
