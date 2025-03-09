@@ -1,6 +1,7 @@
 #include "utils.hpp"
 #include <cstdio>
 #include <array>
+#include <algorithm> // Required for std::remove
 
 std::string runCommand(const std::string &command) {
     std::array<char, 256> buffer;
@@ -11,6 +12,11 @@ std::string runCommand(const std::string &command) {
         result += buffer.data();
     }
     pclose(pipe);
+
+    // Remove trailing newline characters (CRITICAL FIX)
+    result.erase(std::remove(result.begin(), result.end(), '\n'), result.end());
+    result.erase(std::remove(result.begin(), result.end(), '\r'), result.end()); // Also remove carriage returns just in case
+
     return result;
 }
 

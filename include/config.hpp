@@ -12,6 +12,7 @@ public:
     std::string desktop;
     std::string shell;
     std::string terminal;
+    std::string package_manager;
 
     // Loads configuration from file; if missing, launches interactive setup.
     static Config load(const std::string &configPath = "/home/xyz/.config/sysiq/config.json");

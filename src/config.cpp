@@ -35,6 +35,7 @@ Config Config::load(const std::string &configPath) {
         config.desktop = configJson.value("desktop", "");
         config.shell = configJson.value("shell", "");
         config.terminal = configJson.value("terminal", "");
+        config.package_manager = configJson.value("package_manager", "");
     } catch (const std::exception& e) {
         std::cerr << "Error loading config file: " << e.what() << ". Using interactive setup." << std::endl;
         return interactiveSetup();
@@ -49,6 +50,8 @@ void Config::save(const std::string &configPath) const {
     configJson["desktop"] = desktop;
     configJson["shell"] = shell;
     configJson["terminal"] = terminal;
+    configJson["package_manager"] = package_manager;
+
 
     std::ofstream configFile(configPath);
     if (configFile.is_open()) {
@@ -81,6 +84,9 @@ Config Config::interactiveSetup() {
     std::cout << "Enter your terminal: ";
     std::getline(std::cin, config.terminal);
 
+    std::cout << "Enter your package manager: ";
+    std::getline(std::cin, config.package_manager);
+    
     std::cout << "Interactive configuration complete." << std::endl;
     return config;
 }

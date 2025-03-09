@@ -115,9 +115,9 @@ std::string queryAI(const std::string &prompt, const std::string &apiKey) {
 }
 
 PackageListResponse queryPackageList(const Config &config, const json &sysInfo, const std::string &userQuery, const std::string &apiKey) {
-    std::string prompt = "package and what syntax (the whole string to copy paste) to run with that package  to resolve this query: " + userQuery  + "considering im using " + config.distro + " " +
+    std::string prompt = "Find a community-proven package and what syntax (the whole string to copy paste) to run with that package  to resolve this query: " + userQuery  + "considering im using " + config.distro + " " +
                          config.desktop + " " + config.shell + " " + config.terminal +
-                         + " using this JSON schema: packages = {\"package_name\": str, \"command\":str} Return: list[packages]. Your reply will be parsed with the nlohmann/json library so the format must be correct!";
+                         + " using this JSON schema: packages = {\"package_name\": str, \"command\":str} Return: list[packages]. Your reply will be parsed with the nlohmann/json library so the format must be correct, the command field has to be simply a string that I will copy paste and execute in my terminal. Make sure first we get the package name then the command please.";
     std::cout << "Prompt being sent to AI:\n" << prompt << std::endl; // Added logging
 
     std::string response = queryAI(prompt, apiKey);
