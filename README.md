@@ -40,42 +40,44 @@ From the `src` directory:
 ```bash
 cd SysIQ/src
 g++ -o ../bin/sysiq main.cpp config.cpp systeminfo.cpp ai.cpp utils.cpp -lcurl -std=c++17 -I../include
+```
 
-Ensure -lcurl and -std=c++17 are included in your compilation command. Adjust -I../include if necessary.
-Execution:
+**Note:** Ensure `-lcurl` and `-std=c++17` are included in your compilation command. Adjust `-I../include` if necessary.
+
+### Execution:
 
 Run the compiled binary with your query as an argument:
 
-      
+```bash
 ./bin/sysiq <query>
+```
 
+**Example Queries:**
 
-Example Queries:
-
+```bash
 ./bin/sysiq get my ip address
 ./bin/sysiq check free disk space
 ./bin/sysiq current weather in London
 ./bin/sysiq monitor model na
+```
 
-SysIQ will:
+### How SysIQ Works:
 
-    Query Gemini AI: Send a request based on your query and system information.
+When you run a query, SysIQ will:
 
-    Suggest Packages: Output a list of packages potentially required for the task.
+1. **Query Gemini AI:** Send a request based on your query and system information.
+2. **Suggest Packages:** Output a list of packages potentially required for the task.
+3. **User Selection:** Present a numbered list, allowing you to choose a package.
+4. **Installation Prompt:** Prompt for installation if the selected package is not detected.
+5. **Execute Command:** Run the command associated with the chosen package and display the result.
 
-    User Selection: Present a numbered list, allowing you to choose a package.
+### Configuration:
 
-    Installation Prompt: Prompt for installation if the selected package is not detected.
+Configuration is managed through `~/.config/sysiq/config.json`. The file is created on first run if it does not exist, and an interactive setup will guide you through initial configuration.
 
-    Execute Command: Run the command associated with the chosen package and display the result.
+**Config File Structure:**
 
-Configuration:
-
-Configuration is managed through ~/.config/sysiq/config.json. The file is created on first run if it does not exist, and an interactive setup will guide you through initial configuration.
-
-Config File (config.json) Structure:
-
-      
+```json
 {
   "distro": "Your Linux Distribution",
   "desktop": "Your Desktop Environment",
@@ -84,14 +86,18 @@ Config File (config.json) Structure:
   "ai_api": "YOUR_API_KEY_HERE",
   "package_manager": "Your Package Manager (e.g., yay, apt, dnf)"
 }
+```
 
+**API Key Security:** Store your `ai_api` key securely. Environment variables are recommended over direct inclusion in the configuration file for sensitive credentials.
 
-API Key Security: Store your ai_api key securely. Environment variables are recommended over direct inclusion in the configuration file for sensitive credentials.
-Contributing
+## Contributing
 
-Contributions are welcome. Fork the repository, submit pull requests, or create issues for bug reports and feature suggestions.
-License
+Contributions are welcome! Fork the repository, submit pull requests, or create issues for bug reports and feature suggestions.
+
+## License
 
 MIT License
 
-Command line assistance, powered by AI.
+---
+
+*Command line assistance, powered by AI.*
